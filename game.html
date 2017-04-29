@@ -1,0 +1,371 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.js'></script>
+    <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+    <style>
+        #chat {
+            width: 300px;
+            height: 500px;
+            margin-left: 900px;
+        }
+
+        #content {
+            width: 300px;
+            height: 400px;
+            border: 1px solid #ccc;
+            padding: 3px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 50px;
+        }
+
+        button {
+            width: 100px;
+            height: 40px;
+        }
+
+        canvas {
+            float: left;
+        }
+
+        #test1 {
+            width: 100px;
+            height: 30px;
+            border: 1px solid #ccc;
+            margin-left: 720px;
+            line-height: 30px;
+        }
+
+    </style>
+</head>
+<body>
+<audio id="myAudio" loop autoplay style="display: none">
+    <source src="http://vocaroo.com/media_command.php?media=s0Z02uqwHRQk&command=download_mp3" type="audio/mpeg">
+</audio>
+<div id="fb-root"></div>
+<script>
+    (function (d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s);
+        js.id = id;
+        js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.8&appId=1827655107499913";
+        fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+    function checkLoginState() {
+        FB.getLoginStatus(function(response) {
+//            console.log(response);
+            if (response.status == 'connected') {
+                $("textarea#text").css('display','');
+                $("button#send").removeAttr('disabled');
+                $("div#facebook-login").css('display','none');
+                FB.api('/me', function(response) {
+//                    console.log(response);
+                    $("input#name").val(response.name);
+                });
+//                socket.emit('fb-connected',)
+            }
+        });
+    }
+</script>
+<canvas id="canvas" style="border:1px solid #ccc"></canvas>
+<div id="chat">
+    <div id="content"></div>
+    <input type="text" id="name" style="display: none">
+    <div id="facebook-login" class="fb-login-button" data-max-rows="1" data-size="icon" data-show-faces="false"
+         data-auto-logout-link="false" onlogin="checkLoginState();"></div>
+    <textarea style="display: none" id="text"></textarea>
+    <button disabled id="send">Gửi</button>
+</div>
+<div id="test1">Connecting...</div>
+<div id="test2">Ai dang onl ??</div>
+<script>
+    'use strict';
+    var canvas = document.getElementById("canvas");
+    var context = canvas.getContext("2d");
+    var socket = io.connect(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port);
+    // console.log(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port);
+    canvas.width = 700;
+    canvas.height = 583;
+    // var  me = new Audio("me.wav");
+    // var  you = new Audio("you.wav");
+    // var win = new Audio("win.wav");
+    function line(x, y, a, b) {
+        context.moveTo(x, y);
+        context.lineTo(a, b);
+        context.stroke();
+    }
+
+    function chessBoard() {
+        this.colls = 30;
+        this.boxSize = canvas.width / this.colls;
+        this.rows = 25;
+        this.innings;
+        this.win;
+        this.board = [];
+        this.play = true;
+    }
+
+    chessBoard.prototype.init = function () {
+        this.innings = 0;
+        this.win = false;
+        this.board = [];
+        for (var i = 0; i < this.rows; i++) {
+            this.board[i] = [];
+            for (var j = 0; j < this.colls; j++)
+                this.board[i][j] = -1;
+        }
+    };
+    chessBoard.prototype.checkWin = function (x, y) {
+        var tx = x;
+        var ty = y;
+        var count = 1;
+        var chandau = 0;
+
+        /* <-- */
+        while (ty > 0 && this.board[tx][ty - 1] == this.board[x][y]) {
+            count++;
+            if (count == 5) this.win = true;
+            ty--;
+        }
+        if (this.board[tx][ty - 1] != -1 && this.board[tx][ty - 1] != this.board[x][y]) {
+            chandau++;
+        }
+        /* --> */
+        tx = x, ty = y;
+        while (ty < this.colls - 1 && this.board[tx][ty + 1] == this.board[x][y]) {
+            count++;
+            if (count == 5) this.win = true;
+            ty++;
+        }
+        if (this.board[tx][ty + 1] != -1 && this.board[tx][ty + 1] != this.board[x][y]) {
+            chandau++;
+        }
+        if (chandau == 2) {
+            this.win = false;
+        }
+
+        /* ^ */
+        count = 1;
+        tx = x;
+        ty = y;
+        chandau = 0;
+        while (tx > 0 && this.board[tx - 1][ty] == this.board[x][y]) {
+            count++;
+            if (count == 5) this.win = true;
+            tx--;
+        }
+        if (this.board[tx - 1][ty] != -1 && this.board[tx - 1][ty] != this.board[x][y]) {
+            chandau++;
+        }
+        /* v */
+        tx = x;
+        ty = y;
+        while (tx < this.rows - 1 && this.board[tx + 1][ty] == this.board[x][y]) {
+            count++;
+            if (count == 5) this.win = true;
+            tx++;
+        }
+        if (this.board[tx + 1][ty] != -1 && this.board[tx + 1][ty] != this.board[x][y]) {
+            chandau++;
+        }
+        if (chandau == 2) {
+            this.win = false;
+        }
+
+        /* <^ */
+        count = 1;
+        tx = x;
+        ty = y;
+        chandau = 0;
+        while (tx > 0 && ty > 0 && this.board[tx - 1][ty - 1] == this.board[x][y]) {
+            count++;
+            if (count == 5) this.win = true;
+            tx--;
+            ty--;
+        }
+        if (this.board[tx - 1][ty - 1] != -1 && this.board[tx - 1][ty - 1] != this.board[x][y]) {
+            chandau++;
+        }
+        /* v> */
+        tx = x;
+        ty = y;
+        while (tx < this.rows - 1 && ty < this.colls - 1 && this.board[tx + 1][ty + 1] == this.board[x][y]) {
+            count++;
+            if (count == 5) this.win = true;
+            tx++;
+            ty++;
+        }
+        if (this.board[tx + 1][ty + 1] != -1 && this.board[tx + 1][ty + 1] != this.board[x][y]) {
+            chandau++;
+        }
+        if (chandau == 2) {
+            this.win = false;
+        }
+
+        /* <v */
+        count = 1;
+        tx = x;
+        ty = y;
+        chandau = 0;
+        while (tx < this.rows - 1 && ty > 0 && this.board[tx + 1][ty - 1] == this.board[x][y]) {
+            count++;
+            if (count == 5) this.win = true;
+            tx++;
+            ty--;
+        }
+        if (this.board[tx + 1][ty - 1] != -1 && this.board[tx + 1][ty - 1] != this.board[x][y]) {
+            chandau++;
+        }
+        /* ^> */
+        tx = x;
+        ty = y;
+        while (tx > 0 && ty < this.colls - 1 && this.board[tx - 1][ty + 1] == this.board[x][y]) {
+            count++;
+            if (count == 5) this.win = true;
+            tx--;
+            ty++
+        }
+        if (this.board[tx - 1][ty + 1] != -1 && this.board[tx - 1][ty + 1] != this.board[x][y]) {
+            chandau++;
+        }
+        if (chandau == 2) {
+            this.win = false;
+        }
+
+        if (this.win == true) {
+            // win.play();
+            console.log('win');
+            $("div#test2").html((this.inning == 0) ? ("d biet ai thang") : ("d biet ai win."));
+            this.init();
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            this.draw();
+            alert((this.inning == 0) ? ("X win") : ("O win"));
+            location.reload();
+        }
+    };
+
+    chessBoard.prototype.draw = function () {
+        context.strokeStyle = "#ccc";
+        context.lineWidth = 1;
+        var i = -this.boxSize;
+        while (i <= canvas.height) {
+            line(0, i + this.boxSize, canvas.width, i + this.boxSize);
+            i += this.boxSize;
+        }
+        i = -this.boxSize;
+        while (i <= canvas.width) {
+            line(i + this.boxSize, 0, i + this.boxSize, canvas.height);
+            i += this.boxSize;
+        }
+
+        var cach = 5;
+        for (var i = 0; i < this.rows; i++)
+            for (var j = 0; j < this.colls; j++) {
+                if (this.board[i][j] == 1) {
+                    if (i == newx && j == newy) {
+                        context.fillStyle = '#ccc';
+                        context.fillRect(j * this.boxSize, i * this.boxSize, this.boxSize, this.boxSize);
+                    }
+                    context.beginPath();
+                    context.strokeStyle = "blue";
+                    line(j * this.boxSize + cach, i * this.boxSize + cach, j * this.boxSize + this.boxSize - cach, i * this.boxSize + this.boxSize - cach);
+                    line(j * this.boxSize + this.boxSize - cach, i * this.boxSize + cach, j * this.boxSize + cach, i * this.boxSize + this.boxSize - cach);
+                    context.stroke();
+                }
+                if (this.board[i][j] == 0) {
+                    if (i == newx && j == newy) {
+                        context.fillStyle = '#ccc';
+                        context.fillRect(j * this.boxSize, i * this.boxSize, this.boxSize, this.boxSize);
+                    }
+                    context.beginPath();
+                    context.strokeStyle = "red";
+                    context.arc(j * this.boxSize + this.boxSize / 2, i * this.boxSize + this.boxSize / 2, 8, 0, Math.PI * 2, false);
+                    context.stroke();
+                }
+            }
+
+    };
+
+    chessBoard.prototype.input = function (mouse) {
+        var x = mouse.offsetX;
+        var y = mouse.offsetY;
+        var tx, ty;
+        for (var i = 0; i < this.rows; i++)
+            for (var j = 0; j < this.colls; j++) {
+                if (x > j * this.boxSize && x < j * this.boxSize + this.boxSize && y > i * this.boxSize && y < i * this.boxSize + this.boxSize) {
+                    if (this.board[i][j] == -1) {
+                        // me.play();
+                        this.board[i][j] = this.innings;
+                        this.innings = (this.innings == 0) ? 1 : 0;
+                        tx = i;
+                        ty = j;
+                        newx = i;
+                        newy = j;
+                        var data = {x: tx, y: ty, v: this.innings};
+                        socket.emit("minhdi", data);
+                        this.play = 0;
+                    }
+                }
+            }
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        Board.draw();
+        this.checkWin(tx, ty);
+    };
+
+    var Board = new chessBoard();
+    Board.init();
+    Board.draw();
+    var newx, newy;
+    socket.on('doiphuongdi', function (data) {
+        if (Board.board[data.x][data.y] == -1) {
+            // you.play();
+            Board.board[data.x][data.y] = data.v;
+            newx = data.x;
+            newy = data.y;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            Board.draw();
+            if (data.v == 1)
+                Board.innings = 0;
+            else Board.innings = 1;
+            Board.checkWin(data.x, data.y);
+            Board.play = 1;
+        }
+    });
+    socket.on('online', function (data) {
+        document.getElementById('test1').innerHTML = data + ' online';
+    });
+    canvas.addEventListener("mousedown", function (e) {
+        if (Board.play == 1) {
+            Board.input(e);
+        }
+    });
+
+    var name, msg;
+    function send() {
+        name = $('#name').val();
+        msg = $('#text').val();
+        if (name && msg) {
+            // $('<div id="c"><b>'+name+':</b> ' +msg+ '</div>').appendTo('#content');
+            if ($('#content #c').size() >= 15) $('#content #c:first').remove();
+            $('#text').val('');
+            $('#name').fadeOut();
+            var msgchat = {u: name, txt: msg};
+            socket.emit('send', msgchat);
+        }
+    }
+    $('#text').keyup(function (evt) {
+        if ((evt.keyCode) == 13)
+            send();
+    });
+    $('#send').click(send);
+    socket.on('nhan', function (ms) {
+        $('<div id="c"><i>' + ms.u + ':</i> ' + ms.txt + '</div>').appendTo('#content');
+        if ($('#content #c').size() >= 15) $('#content #c:first').remove();
+    });
+</script>
+</body>
